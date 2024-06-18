@@ -1,4 +1,5 @@
 const mongoose = require('mongoose'); // Erase if already required
+const { ObjectId } = require('mongodb');
 
 // Declare the Schema of the Mongo model
 var productSchema = new mongoose.Schema({
@@ -47,9 +48,14 @@ var productSchema = new mongoose.Schema({
     ratings: [
         {
             star: Number,
-            postedby: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            comment: String,
+            postedby: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
         },
     ],
+    totalrating: {
+        type: String,
+        default: 0,
+    },
 },
     { timestamps: true }
 );
