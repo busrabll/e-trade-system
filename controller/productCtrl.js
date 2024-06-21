@@ -2,6 +2,9 @@ const Product = require("../models/productModel");
 const User = require("../models/userModel");
 const asyncHandler = require("express-async-handler");
 const slugify = require("slugify");
+const validateMongoDbId = require("../utils/validateMongodbId");
+const cloudinaryUploadImg = require("../utils/cloudinary");
+const fs = require("fs");
 
 const createProduct = asyncHandler(async (req, res) => {
     try {
@@ -184,9 +187,70 @@ const rating = asyncHandler(async (req, res) => {
     }
 });
 
-const uploadImages = asyncHandler(async (req, res) =>{
-    console.log(req.files);
+const uploadImages = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    validateMongoDbId(id);
+    try {
+        const uploader = (path) => cloudinaryUploadImg(path, "images");
+        const urls = [];
+        const files = req.files;
+        for (const file of files) {
+            const { path } = file;
+            const newpath = await uploader(path);
+            urls.push(newpath);
+
+            // Dosyanın var olup olmadığını kontrol edin
+            if (fs.existsSync(path)) {
+                try {
+                    fs.unlinkSync(path);
+                } catch (err) {
+                    console.error(`Error while deleting the file ${path}`, err);
+                }
+            } else {
+                console.error(`File ${path} does not exist`);
+            }
+        }
+        const findProduct = await Product.findByIdAndUpdate(id, {
+            images: urls.map((file) => {
+                return { url: file.url };
+            }),
+        },
+            {
+                new: true,
+            });
+        res.json(findProduct);
+    } catch (error) {
+        throw new Error(error);
+    }
 });
+
+/*const uploadImages = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    validateMongoDbId(id);
+    try {
+        const uploader = (path) => cloudinaryUploadImg(path, "images");
+        const urls = [];
+        const files = req.files;
+        for (const file of files) {
+            const { path } = file;
+            const newpath = await uploader(path);
+            urls.push(newpath);
+            fs.unlinkSync(path); 
+        }
+        const findProduct = await Product.findByIdAndUpdate(id, {
+            images: urls.map((file) => {
+                return file
+            }),
+        },
+            {
+                new: true,
+            }
+        );
+        res.json(findProduct);
+    } catch (error) {
+        throw new Error(error);
+    }
+});*/
 
 module.exports = {
     createProduct,
